@@ -13,7 +13,7 @@ Camera element that allows you to pick sources and get video frame data
 @blurb Camera element that allows you to pick sources and get video frame data
 @status alpha
 -->
-<polymer-element name="posh-camera" attributes="notitle author">
+<polymer-element name="posh-camera" on-click="{{toggleMenu}}" attributes="source">
 
   <template>
 
@@ -21,14 +21,15 @@ Camera element that allows you to pick sources and get video frame data
     <content>
       <video id="vid" autoplay="true"></video>
       <canvas id="canvas"></canvas>
-      <br>
-      <paper-button raised on-tap="{{refreshSources}}">Refresh Video Sources</paper-button>
 
-      <paper-button raised on-tap="{{saveCurrentFrameToFile}}">Image</paper-button>
+      <div id="sourcesmenu">
+        <paper-button raised on-tap="{{refreshSourcesClick}}">Refresh Video Sources</paper-button>
+          <template repeat="{{ src in videoSources }}">
+              <paper-checkbox data-videoSourceId="{{src.id}}" on-change="{{onVideoSourceSelect}}"></paper-checkbox> {{src.label}}
+          </template>
+        </ul>
+      </div>
 
-      <template repeat="{{ src in videoSources }}">
-        <paper-checkbox data-videoSourceID="{{src.id}}" on-change="{{onVideoSourceSelection}}"></paper-checkbox>{{src.label}}
-      </template>
     </content>
 
   </template>
@@ -49,6 +50,14 @@ Camera element that allows you to pick sources and get video frame data
       videoSources: [],
 
       /**
+       * video source used
+       * @attribute video source
+       * @type string
+       * @default none
+       */
+      source: "none",
+
+      /**
        * on component ready
        *
        */
@@ -56,7 +65,42 @@ Camera element that allows you to pick sources and get video frame data
         self = this;
 
         this.canvasctx = this.$.canvas.getContext("2d");
-        this.refreshVideoSources();
+        this.refreshVideoSources( function(sources) {
+          self.parseSourceAttribute(this.source);
+        });
+      },
+
+      /**
+       * toggle sources menu off and on
+       */
+      toggleMenu: function() {
+        var cssprops = window.getComputedStyle(this.$.sourcesmenu);
+        if (cssprops.display == "none") {
+          this.$.sourcesmenu.style.display = "block";
+        } else {
+          this.$.sourcesmenu.style.display = "none";
+        }
+      },
+
+      /**
+       * set video source by index
+       *
+       * @param index
+       */
+      setSourceByIndex: function(indx) {
+        if (indx >= self.videoSources.length) { console.log("Video Source Index does not exist"); return; }
+        this.setSourceById(self.videoSources[indx].id);
+      },
+
+      /**
+       * set video source by id
+       *
+       * @param video id
+       */
+      setSourceById: function(id) {
+        // todo: update checkbox to indicate what's being used
+        navigator.webkitGetUserMedia({ video: {optional: [{sourceId: id }]}},
+          self.onVideoStream, function() {});
       },
 
       /**
@@ -88,13 +132,29 @@ Camera element that allows you to pick sources and get video frame data
         fs.writeFileSync(pth, binaryData, 'binary' );
       },
 
+      /**
+       * refresh sources click handler
+       *
+       * @param {object} event
+       */
+      refreshSourcesClick: function(e) {
+        self.refreshVideoSources();
+      },
 
       /**
        * get video sources
+       *
+       * @param {object} callback
        */
-      refreshVideoSources: function() {
+      refreshVideoSources: function(cb) {
+        for (var c = 0; c < self.$.sourcesmenu.childNodes.length; c++) {
+          console.log(self.$.sourcesmenu.childNodes[c])
+        }
         this.videoSources = [];
-        MediaStreamTrack.getSources(this.onVideoSources);
+        MediaStreamTrack.getSources( function(sources) {
+          self.onVideoSources(sources);
+          if (cb) { cb.apply(self, [sources]); }
+        });
       },
 
       /**
@@ -122,10 +182,8 @@ Camera element that allows you to pick sources and get video frame data
        * @param {object} detail
        * @parma {object} sender
        */
-        onVideoSourceSelection: function(e, detail, sender) {
-          self.currentVideoSourceID = sender.getAttribute('data-videoSourceID');
-          navigator.webkitGetUserMedia({ video: {optional: [{sourceId: self.currentVideoSourceID }]}},
-            self.onVideoStream, function() {});
+        onVideoSourceSelect: function(e, detail, sender) {
+          this.setSourceById(sender.getAttribute('data-videoSourceId'));
         },
 
         /**
@@ -135,6 +193,19 @@ Camera element that allows you to pick sources and get video frame data
         */
         onVideoStream: function(stream) {
           self.$.vid.src = webkitURL.createObjectURL(stream);
+        },
+
+        /**
+         * parse source attribute
+         * @param {string} source
+         * @return {object} source
+         */
+        parseSourceAttribute: function(src) {
+          if (parseInt(src)) {
+            this.setSourceByIndex(parseInt(src));
+          }
+
+          // Todo: allow other ways of setting the source (by ID? by name?)
         }
     });
 
