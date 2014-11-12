@@ -147,9 +147,6 @@ Camera element that allows you to pick sources and get video frame data
        * @param {object} callback
        */
       refreshVideoSources: function(cb) {
-        for (var c = 0; c < self.$.sourcesmenu.childNodes.length; c++) {
-          console.log(self.$.sourcesmenu.childNodes[c])
-        }
         this.videoSources = [];
         MediaStreamTrack.getSources( function(sources) {
           self.onVideoSources(sources);
