@@ -94,6 +94,7 @@ Camera element that allows you to pick sources and get video frame data
           this.$.vid.setAttribute("display", "none");
           this.tick = setInterval(function() {
             self.canvasctx.drawImage(self.$.vid,0,0);
+            self.fire('camera-frame-update', self.getCurrentFrameData(null, true));
           }, this.canvasRefreshInterval);
         } else {
           this.$.canvas.setAttribute("display", "none");
@@ -102,6 +103,15 @@ Camera element that allows you to pick sources and get video frame data
         this.refreshVideoSources( function(sources) {
           self.parseSourceAttribute(this.currentSource);
         });
+      },
+
+      /**
+       * get canvas context
+       * @method get canvas context for drawing into it
+       * @return {object} canvas context
+       */
+      getCanvasContext: function() {
+        return this.canvasctx;
       },
 
       /**
@@ -144,14 +154,18 @@ Camera element that allows you to pick sources and get video frame data
        *
        * @method getCurrentFrameData
        * @param {boolean} data mode (binary or base64)
+       * @param {boolean} do not perform redraw (can be wasteful)
        * @return {object} image data
        */
-      getCurrentFrameData: function(mode) {
+      getCurrentFrameData: function(mode, noredraw) {
         if (!mode) { mode = "binary"; }
 
-        this.$.canvas.setAttribute('width', self.videoSize.width);
-        this.$.canvas.setAttribute('height', self.videoSize.height);
-        this.canvasctx.drawImage(this.$.vid,0,0);
+        if (!noredraw) {
+          this.$.canvas.setAttribute('width', self.videoSize.width);
+          this.$.canvas.setAttribute('height', self.videoSize.height);
+          this.canvasctx.drawImage(this.$.vid,0,0);
+        }
+
         var data = this.$.canvas.toDataURL("image/png");
 
         if (mode == "binary") {
