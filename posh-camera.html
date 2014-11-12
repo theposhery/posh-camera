@@ -13,7 +13,7 @@ Camera element that allows you to pick sources and get video frame data
 @blurb Camera element that allows you to pick sources and get video frame data
 @status alpha
 -->
-<polymer-element name="posh-camera" on-click="{{toggleMenu}}" attributes="source">
+<polymer-element name="posh-camera" on-click="{{toggleMenu}}" attributes="currentSource">
 
   <template>
 
@@ -50,12 +50,12 @@ Camera element that allows you to pick sources and get video frame data
       videoSources: [],
 
       /**
-       * video source used
-       * @attribute video source
+       * current video source used
+       * @attribute currentSource
        * @type string
        * @default none
        */
-      source: "none",
+      currentSource: "none",
 
       /**
        * on component ready
@@ -66,12 +66,13 @@ Camera element that allows you to pick sources and get video frame data
 
         this.canvasctx = this.$.canvas.getContext("2d");
         this.refreshVideoSources( function(sources) {
-          self.parseSourceAttribute(this.source);
+          self.parseSourceAttribute(this.currentSource);
         });
       },
 
       /**
        * toggle sources menu off and on
+       * @method toggleMenu
        */
       toggleMenu: function() {
         var cssprops = window.getComputedStyle(this.$.sourcesmenu);
@@ -84,10 +85,11 @@ Camera element that allows you to pick sources and get video frame data
 
       /**
        * set video source by index
-       *
+       * @method setSourceByIndex
        * @param index
        */
       setSourceByIndex: function(indx) {
+        console.log("set surce by index: " + self.videoSources[indx].id)
         if (indx >= self.videoSources.length) { console.log("Video Source Index does not exist"); return; }
         this.setSourceById(self.videoSources[indx].id);
       },
@@ -95,6 +97,7 @@ Camera element that allows you to pick sources and get video frame data
       /**
        * set video source by id
        *
+       * @method setSourceById
        * @param video id
        */
       setSourceById: function(id) {
@@ -106,6 +109,7 @@ Camera element that allows you to pick sources and get video frame data
       /**
        * get image data for current frame
        *
+       * @method getCurrentFrameData
        * @param {string} image type
        * @return {object} image data
        */
@@ -119,6 +123,7 @@ Camera element that allows you to pick sources and get video frame data
       /**
        * save current frame to file
        *
+       * @method saveCurrentFrameToFile
        * @param file path
        * @param image type
        */
@@ -144,6 +149,7 @@ Camera element that allows you to pick sources and get video frame data
       /**
        * get video sources
        *
+       * @method refreshVideoSources
        * @param {object} callback
        */
       refreshVideoSources: function(cb) {
