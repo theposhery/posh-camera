@@ -19,15 +19,19 @@ Camera element that allows you to pick sources and get video frame data
 
     <link rel="stylesheet" href="posh-camera.css" />
     <content>
-      <video id="vid" autoplay="true"></video>
-      <canvas id="canvas"></canvas>
+      <div>
+        <video id="vid" autoplay="true"></video>
 
-      <div id="sourcesmenu">
-        <paper-button raised on-tap="{{refreshSourcesClick}}">Refresh Video Sources</paper-button>
+        <!-- invisible canvas element to route video to and extract data from -->
+        <canvas id="canvas"></canvas>
+
+        <div id="sourcesmenu">
+          <paper-button raised on-tap="{{refreshSourcesClick}}">Refresh Video Sources</paper-button>
           <template repeat="{{ src in videoSources }}">
-              <paper-checkbox data-videoSourceId="{{src.id}}" on-change="{{onVideoSourceSelect}}"></paper-checkbox> {{src.label}}
+            <paper-checkbox data-videoSourceId="{{src.id}}" on-change="{{onVideoSourceSelect}}"></paper-checkbox> {{src.label}}
           </template>
-        </ul>
+          </ul>
+        </div>
       </div>
 
     </content>
@@ -109,14 +113,23 @@ Camera element that allows you to pick sources and get video frame data
        * get image data for current frame
        *
        * @method getCurrentFrameData
-       * @param {string} image type
+       * @param {boolean} data mode (binary or base64)
        * @return {object} image data
        */
-      getCurrentFrameData: function(itype) {
-        if (!itype) { itype = "png"; }
-        this.canvasctx.drawImage(this.$.vid,0,0);
-        var fs = require('fs');
-        return this.$.canvas.toDataURL("image/" + itype);
+      getCurrentFrameData: function(mode) {
+        if (!mode) { mode = "binary"; }
+
+        this.$.canvas.setAttribute('width', this.$.vid.offsetWidth);
+        this.$.canvas.setAttribute('height', this.$.vid.offsetHeight);
+        this.canvasctx.drawImage(this.$.vid,0,0, this.$.vid.offsetWidth,this.$.vid.offsetHeight);
+        var data = this.$.canvas.toDataURL("image/png");
+
+        if (mode == "binary") {
+          var base64Data = data.replace('data:image/png;base64', "");
+          var binaryData =  new Buffer(base64Data, 'base64');
+          data = binaryData;
+        }
+        return data;
       },
 
       /**
@@ -126,12 +139,8 @@ Camera element that allows you to pick sources and get video frame data
        * @param file path
        * @param image type
        */
-      saveCurrentFrameToFile: function(pth, itype) {
-        if (!itype) { itype = "png"; }
-        var data = this.getCurrentFrameData(itype);
-        var base64Data = data.replace('data:image/png;base64', "");
-        var binaryData =  new Buffer(base64Data, 'base64').toString('binary');
-
+      saveCurrentFrameToFile: function(pth) {
+        var data = this.getCurrentFrameData("base64").toString('binary');
         var fs = require('fs');
         fs.writeFileSync(pth, binaryData, 'binary' );
       },
