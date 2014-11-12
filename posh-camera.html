@@ -89,7 +89,6 @@ Camera element that allows you to pick sources and get video frame data
        * @param index
        */
       setSourceByIndex: function(indx) {
-        console.log("set surce by index: " + self.videoSources[indx].id)
         if (indx >= self.videoSources.length) { console.log("Video Source Index does not exist"); return; }
         this.setSourceById(self.videoSources[indx].id);
       },
