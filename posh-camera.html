@@ -13,13 +13,13 @@ Camera element that allows you to pick sources and get video frame data
 @blurb Camera element that allows you to pick sources and get video frame data
 @status alpha
 -->
-<polymer-element name="posh-camera" on-click="{{toggleMenu}}" attributes="currentSource">
+<polymer-element name="posh-camera" on-click="{{toggleMenu}}" attributes="currentSource useCanvasForDisplay canvasRefreshInterval">
 
   <template>
 
     <link rel="stylesheet" href="posh-camera.css" />
     <content>
-      <div>
+      <div id="container">
         <video id="vid" autoplay="true"></video>
 
         <!-- invisible canvas element to route video to and extract data from -->
@@ -62,12 +62,42 @@ Camera element that allows you to pick sources and get video frame data
       currentSource: "none",
 
       /**
+       * determines whether to use the canvas element for display instead of the video element
+       * @attribute useCanvasForDisplay
+       * @type boolean
+       * @default false
+       */
+      useCanvasForDisplay: false,
+
+      /**
+       * refresh interval when using the canvas for display
+       * @attribute canvasRefreshInterval
+       * @type int
+       * @default 250 ms
+       */
+      canvasRefreshInterval: 250,
+
+      /**
+       * video size
+       * @type object
+       */
+      videoSize: { width: 640, height: 480 },
+
+      /**
        * on component ready
        *
        */
       ready: function() {
         self = this;
 
+        if (this.useCanvasForDisplay) {
+          this.$.vid.setAttribute("display", "none");
+          this.tick = setInterval(function() {
+            self.canvasctx.drawImage(self.$.vid,0,0);
+          }, this.canvasRefreshInterval);
+        } else {
+          this.$.canvas.setAttribute("display", "none");
+        }
         this.canvasctx = this.$.canvas.getContext("2d");
         this.refreshVideoSources( function(sources) {
           self.parseSourceAttribute(this.currentSource);
@@ -119,9 +149,9 @@ Camera element that allows you to pick sources and get video frame data
       getCurrentFrameData: function(mode) {
         if (!mode) { mode = "binary"; }
 
-        this.$.canvas.setAttribute('width', this.$.vid.offsetWidth);
-        this.$.canvas.setAttribute('height', this.$.vid.offsetHeight);
-        this.canvasctx.drawImage(this.$.vid,0,0, this.$.vid.offsetWidth,this.$.vid.offsetHeight);
+        this.$.canvas.setAttribute('width', self.videoSize.width);
+        this.$.canvas.setAttribute('height', self.videoSize.height);
+        this.canvasctx.drawImage(this.$.vid,0,0);
         var data = this.$.canvas.toDataURL("image/png");
 
         if (mode == "binary") {
@@ -204,6 +234,13 @@ Camera element that allows you to pick sources and get video frame data
         */
         onVideoStream: function(stream) {
           self.$.vid.src = webkitURL.createObjectURL(stream);
+          self.$.vid.onloadedmetadata = function(e) {
+            self.videoSize.width = self.$.vid.videoWidth;
+            self.videoSize.height = self.$.vid.videoHeight;
+
+            self.$.canvas.setAttribute('width', self.videoSize.width);
+            self.$.canvas.setAttribute('height', self.videoSize.height);
+          };
         },
 
         /**
