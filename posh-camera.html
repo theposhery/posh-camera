@@ -39,9 +39,6 @@ Camera element that allows you to pick sources and get video frame data
   </template>
 
   <script>
-
-    var self;
-
     Polymer({
 
       /**
@@ -78,26 +75,68 @@ Camera element that allows you to pick sources and get video frame data
       canvasRefreshInterval: 250,
 
       /**
-       * video size
-       * @type object
+       * width of component
+       * @attribute width
+       * @type int
+       * @default 0
        */
-      videoSize: { width: 640, height: 480 },
+      width: 0,
+
+      /**
+       * height of component
+       * @attribute height
+       * @type int
+       * @default 0
+       */
+      height: 0,
+
+      /**
+       * left offset for letterbox of video
+       * @attribute letterBoxLeft
+       * @type int
+       * @default 0
+       */
+      letterBoxLeft: 0,
+
+      /**
+       * top offset for letterbox of video
+       * @attribute letterBoxTop
+       * @type int
+       * @default 0
+       */
+      letterBoxTop: 0,
+
+      /**
+       * update canvas dimensions when resized
+       *
+       * @method: onResize
+       */
+      onResize: function() {
+        this.width = this.offsetWidth;
+        this.height = this.offsetHeight;
+        this.$.vid.setAttribute("width", this.width);
+        this.$.vid.setAttribute("height", this.height);
+      },
+
+      domReady: function() {
+        this.onResize();
+      },
+
 
       /**
        * on component ready
-       *
        */
       ready: function() {
         self = this;
 
         if (this.useCanvasForDisplay) {
-          this.$.vid.setAttribute("display", "none");
+          this.$.vid.style.display = 'none';
           this.tick = setInterval(function() {
             self.canvasctx.drawImage(self.$.vid,0,0);
             self.fire('camera-frame-update', self.getCurrentFrameData(null, true));
           }, this.canvasRefreshInterval);
         } else {
-          this.$.canvas.setAttribute("display", "none");
+          this.$.canvas.style.display = 'none';
         }
         this.canvasctx = this.$.canvas.getContext("2d");
         this.refreshVideoSources( function(sources) {
@@ -133,8 +172,8 @@ Camera element that allows you to pick sources and get video frame data
        * @param index
        */
       setSourceByIndex: function(indx) {
-        if (indx >= self.videoSources.length) { console.log("Video Source Index does not exist"); return; }
-        this.setSourceById(self.videoSources[indx].id);
+        if (indx >= this.videoSources.length) { console.log("Video Source Index does not exist"); return; }
+        this.setSourceById(this.videoSources[indx].id);
       },
 
       /**
@@ -146,7 +185,7 @@ Camera element that allows you to pick sources and get video frame data
       setSourceById: function(id) {
         // todo: update checkbox to indicate what's being used
         navigator.webkitGetUserMedia({ video: {optional: [{sourceId: id }]}},
-          self.onVideoStream, function() {});
+          self.onVideoStream.bind(self), function() {});
       },
 
       /**
@@ -161,8 +200,8 @@ Camera element that allows you to pick sources and get video frame data
         if (!mode) { mode = "binary"; }
 
         if (!noredraw) {
-          this.$.canvas.setAttribute('width', self.videoSize.width);
-          this.$.canvas.setAttribute('height', self.videoSize.height);
+          this.$.canvas.setAttribute('width', this.width);
+          this.$.canvas.setAttribute('height', this.height);
           this.canvasctx.drawImage(this.$.vid,0,0);
         }
 
@@ -173,6 +212,7 @@ Camera element that allows you to pick sources and get video frame data
           var binaryData =  new Buffer(base64Data, 'base64');
           data = binaryData;
         }
+        // todo: non-binary mode for assigning data to image elements for example
         return data;
       },
 
@@ -184,9 +224,12 @@ Camera element that allows you to pick sources and get video frame data
        * @param image type
        */
       saveCurrentFrameToFile: function(pth) {
-        var data = this.getCurrentFrameData("base64").toString('binary');
         var fs = require('fs');
-        fs.writeFileSync(pth, binaryData, 'binary' );
+        if (!fs) {
+          throw new Error('This method uses Node.js functionality, and you are not running within Node.js');
+        }
+        var data = this.getCurrentFrameData().toString('binary');
+        fs.writeFileSync(pth, data, 'binary' );
       },
 
       /**
@@ -195,7 +238,7 @@ Camera element that allows you to pick sources and get video frame data
        * @param {object} event
        */
       refreshSourcesClick: function(e) {
-        self.refreshVideoSources();
+        this.refreshVideoSources();
       },
 
       /**
@@ -206,6 +249,7 @@ Camera element that allows you to pick sources and get video frame data
        */
       refreshVideoSources: function(cb) {
         this.videoSources = [];
+        var self = this;
         MediaStreamTrack.getSources( function(sources) {
           self.onVideoSources(sources);
           if (cb) { cb.apply(self, [sources]); }
@@ -224,7 +268,7 @@ Camera element that allows you to pick sources and get video frame data
             var label = sources[i].label;
             if (label == "") { label = "video " + Number(storageIndex+1); }
             sources[storageIndex] = sources[i].id;
-            self.videoSources.push({ label: label, id: sources[i].id });
+            this.videoSources.push({ label: label, id: sources[i].id });
             storageIndex++;
           }
         }
@@ -247,13 +291,11 @@ Camera element that allows you to pick sources and get video frame data
         * @param stream
         */
         onVideoStream: function(stream) {
-          self.$.vid.src = webkitURL.createObjectURL(stream);
-          self.$.vid.onloadedmetadata = function(e) {
-            self.videoSize.width = self.$.vid.videoWidth;
-            self.videoSize.height = self.$.vid.videoHeight;
-
-            self.$.canvas.setAttribute('width', self.videoSize.width);
-            self.$.canvas.setAttribute('height', self.videoSize.height);
+          var self = this;
+          this.$.vid.src = webkitURL.createObjectURL(stream);
+          this.$.vid.onloadedmetadata = function(e) {
+            self.letterBoxTop = (self.height - self.$.vid.videoHeight)/2;
+            self.letterBoxLeft = (self.width - self.$.vid.videoWidth)/2;
           };
         },
 
