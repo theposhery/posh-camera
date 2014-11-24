@@ -157,10 +157,13 @@ Camera element that allows you to pick sources and get video frame data
           var newVideoHeight = this.width / this.aspectRatio;
           this.letterBoxTop = this.height - newVideoHeight;
           this.letterBoxLeft = 0;
-        } else {
+        } else if (componentAspectRatio > this.aspectRatio) {
           var newVideoWidth = this.height / this.aspectRatio;
           this.letterBoxLeft = this.width - newVideoWidth;
           this.letterBoxTop = 0;
+        } else {
+          this.letterBoxTop = 0;
+          this.letterBoxLeft = 0;
         }
       },
 
