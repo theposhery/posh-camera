@@ -13,7 +13,7 @@ Camera element that allows you to pick sources and get video frame data
 @blurb Camera element that allows you to pick sources and get video frame data
 @status alpha
 -->
-<polymer-element name="posh-camera" on-click="{{toggleMenu}}" attributes="currentSource useCanvasForDisplay canvasRefreshInterval">
+<polymer-element name="posh-camera" on-click="{{toggleMenu}}" attributes="currentSource useCanvasForDisplay canvasRefreshInterval scaleX scaleY width height">
 
   <template>
 
@@ -107,21 +107,70 @@ Camera element that allows you to pick sources and get video frame data
       letterBoxTop: 0,
 
       /**
+       * aspect ratio of video
+       * @attribute aspectRatio
+       * @type float
+       * @default 0
+       */
+      aspectRatio: 0,
+
+      /**
+       * horizontal scale of video compared to original format
+       * @attribute scaleX
+       * @type float
+       * @default 0
+       */
+      scaleX: 0,
+
+      /**
+       * vertical scale of video compared to original format
+       * @attribute scaleY
+       * @type float
+       * @default 0
+       */
+      scaleY: 0,
+
+      /**
        * update canvas dimensions when resized
        *
        * @method: onResize
        */
-      onResize: function() {
+      onResize: function () {
+        // set size properties based on component height
         this.width = this.offsetWidth;
         this.height = this.offsetHeight;
+
+        // set video to component size
         this.$.vid.setAttribute("width", this.width);
         this.$.vid.setAttribute("height", this.height);
+
+        // calculate scale values for real video vs component size
+        this.scaleX = this.width / this.$.vid.videoWidth;
+        this.scaleY = this.height / this.$.vid.videoHeight;
+
+        // calculate aspect ratio
+        this.aspectRatio = this.$.vid.videoWidth / this.$.vid.videoHeight;
+
+        // calculate letterbox borders
+        var componentAspectRatio = this.width/this.height;
+        if (componentAspectRatio < this.aspectRatio) {
+          var newVideoHeight = this.width / this.aspectRatio;
+          this.letterBoxTop = this.height - newVideoHeight;
+          this.letterBoxLeft = 0;
+        } else {
+          var newVideoWidth = this.height / this.aspectRatio;
+          this.letterBoxLeft = this.width - newVideoWidth;
+          this.letterBoxTop = 0;
+        }
       },
 
-      domReady: function() {
+      domReady: function () {
+        var self = this;
         this.onResize();
+        this.$.vid.onloadedmetadata = function (e) {
+          self.onResize();
+        };
       },
-
 
       /**
        * on component ready
